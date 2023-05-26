@@ -3,48 +3,50 @@ package jm.task.core.jdbc.dao;
 import jm.task.core.jdbc.model.User;
 import jm.task.core.jdbc.util.Util;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.Statement;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
 import java.util.ArrayList;
 import java.util.List;
 
 public class UserDaoJDBCImpl implements UserDao {
+
+    private final Connection connection = Util.getConnection();
+
     public UserDaoJDBCImpl() {
 
     }
-    public static long iid ;
-    Util ut = new Util();
-    Connection con = ut.getConnection();
 
+    @Override
     public void createUsersTable() {
-        try {
-            Statement statement = con.createStatement();
-            statement.executeUpdate("CREATE TABLE IF NOT EXISTS Users (Id INT PRIMARY KEY , name VARCHAR(20), lastName VARCHAR(20), age int)");
-
+        try (Statement statement = connection.createStatement()) {
+            statement.executeUpdate("CREATE TABLE IF NOT EXISTS users (id BIGINT PRIMARY KEY " +
+                    "AUTO_INCREMENT , name VARCHAR(20), lastname VARCHAR(20), age TINYINT)");
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
-
     }
 
+    @Override
     public void dropUsersTable() {
-        try {
-            Statement statement = con.createStatement();
-            statement.executeUpdate("DROP TABLE IF EXISTS Users");
+        try (Statement statement = connection.createStatement()) {
+            statement.executeUpdate("DROP TABLE IF EXISTS users");
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
-
     }
 
+    @Override
     public void saveUser(String name, String lastName, byte age) {
         User user = new User(name, lastName, age);
-        user.setId((iid++));
-        try {
-            PreparedStatement prpstatement = con.prepareStatement("INSERT INTO Users (Id,name, lastName,age) VALUES (?,?,?,?)");
-            prpstatement.setLong(1, user.getId());
-            prpstatement.setString(2, user.getName());
-            prpstatement.setString(3, user.getLastName());
-            prpstatement.setByte(4, user.getAge());
+        try (PreparedStatement prpstatement = connection.prepareStatement("INSERT INTO users" +
+                " (name, lastName,age) VALUES (?,?,?)")) {
+            prpstatement.setString(1, user.getName());
+            prpstatement.setString(2, user.getLastName());
+            prpstatement.setByte(3, user.getAge());
             prpstatement.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -53,25 +55,21 @@ public class UserDaoJDBCImpl implements UserDao {
         System.out.println("User с именем – " + name + " добавлен в базу данных");
     }
 
+    @Override
     public void removeUserById(long id) {
-        try {
-            PreparedStatement prpstatement = con.prepareStatement("DELETE FROM Users WHERE id = ?");
+        try (PreparedStatement prpstatement = connection.prepareStatement("DELETE FROM users WHERE id = ?")) {
             prpstatement.setLong(1, id);
             prpstatement.executeUpdate();
-
-
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
     }
 
+    @Override
     public List<User> getAllUsers() {
-
-
         List<User> userslist = new ArrayList<>();
-        try {
-            Statement statement = con.createStatement();
-            ResultSet resultSet = statement.executeQuery("SELECT Id, name, lastName, age FROM Users");
+        try (Statement statement = connection.createStatement()) {
+            ResultSet resultSet = statement.executeQuery("SELECT id, name, lastname, age FROM users");
             while (resultSet.next()) {
                 User user = new User();
                 user.setId(resultSet.getLong(1));
@@ -85,18 +83,15 @@ public class UserDaoJDBCImpl implements UserDao {
             throw new RuntimeException(e);
         }
         return userslist;
-
     }
 
-
+    @Override
     public void cleanUsersTable() {
-        try {
-            Statement statement = con.createStatement();
-            statement.executeUpdate("TRUNCATE TABLE  Users");
+        try (Statement statement = connection.createStatement()) {
+            statement.executeUpdate("TRUNCATE TABLE  users");
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
     }
-
 }
 
